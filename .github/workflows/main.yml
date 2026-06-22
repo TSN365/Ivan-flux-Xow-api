@@ -1,0 +1,43 @@
+name: Generate Ivan-FluX JSON
+
+on:
+  schedule:
+    - cron: '0 * * * *' # প্রতি ঘন্টায় একবার অটো রান হবে (Safety net)
+  workflow_dispatch:      # গিটহাব ওয়েবসাইট থেকে রান করার জন্য
+  repository_dispatch:    # Cron-job.org বা বাইরের ট্রিগার শোনার জন্য
+    types: [manual_push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write     # ফাইল পুশ করার পারমিশন
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests pycryptodome
+
+      - name: Run Data Generator
+        env:
+          AES_SECRET: ${{ secrets.AES_SECRET }}
+          LIVXOW_URL: ${{ secrets.LIVXOW_URL }}
+        run: python main.py
+
+      - name: Commit and Push Changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add Ivan-FluX.json
+          # যদি ফাইলে কোনো পরিবর্তন না থাকে তবে এরর এড়াতে এই চেকটি দেওয়া হয়েছে
+          git commit -m "Update Ivan-FluX.json [Skip CI]" || exit 0
+          git push
